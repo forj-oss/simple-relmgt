@@ -21,6 +21,7 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -31,15 +32,8 @@ var App simpleRelMgtApp
 func main() {
 	App.init()
 
-	switch kingpin.MustParse(App.app.Parse(os.Args[1:])) {
-	// Register user
-	case App.draftIt.cmd.FullCommand():
-		App.draftIt.DoDraftIt()
-	case App.check.cmd.FullCommand():
-		App.check.DoCheck()
-	case App.tagIt.cmd.FullCommand():
-		App.tagIt.DoTagIt()
-	case App.releaseIt.cmd.FullCommand():
-		App.releaseIt.DoReleaseIt()
+	actions := strings.Split(kingpin.MustParse(App.app.Parse(os.Args[1:])), " ")
+	if f, found := App.actionDispatch[actions[0]]; found {
+		f(actions)
 	}
 }

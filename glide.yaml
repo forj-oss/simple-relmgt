@@ -1,0 +1,7 @@
+package: simple-relmgt
+import:
+- package: github.com/alecthomas/kingpin
+  version: ^2.2.6
+- package: github.com/forj-oss/forjj-modules
+  subpackages:
+  - trace

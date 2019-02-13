@@ -19,10 +19,43 @@ package main
 	SEE LICENSE.txt for license details.
 */
 
-import "github.com/alecthomas/kingpin"
+import (
+	"fmt"
+	"simple-relmgt/cmds/checkcmd"
+	"simple-relmgt/cmds/draftcmd"
+	"simple-relmgt/cmds/releasecmd"
+	"simple-relmgt/cmds/statecmd"
+	"simple-relmgt/cmds/tagcmd"
+
+	"github.com/alecthomas/kingpin"
+	"github.com/forj-oss/forjj-modules/trace"
+)
+
+const (
+	check     = "check"
+	stateIt   = "status"
+	draftIt   = "draft-it"
+	tagIt     = "tag-it"
+	releaseIt = "release-it"
+)
+
+var (
+	build_branch string
+	build_commit string
+	build_date string
+	build_tag string
+)
 
 type simpleRelMgtApp struct {
 	app *kingpin.Application
+
+	actionDispatch map[string]func([]string)
+
+	check   checkcmd.CheckCmd
+	state   statecmd.StateCmd
+	draft   draftcmd.DraftCmd
+	tag     tagcmd.TagCmd
+	release releasecmd.ReleaseCmd
 }
 
 func (a *simpleRelMgtApp) init() {
@@ -31,11 +64,18 @@ func (a *simpleRelMgtApp) init() {
 	a.app = kingpin.New("simple-relmgt", "Simple release management tool.")
 
 	a.setVersion()
+
+	a.actionDispatch = make(map[string]func([]string))
+	a.actionDispatch[check] = a.check.Action
+	a.actionDispatch[stateIt] = a.state.Action
+	a.actionDispatch[draftIt] = a.draft.Action
+	a.actionDispatch[tagIt] = a.tag.Action
+	a.actionDispatch[releaseIt] = a.release.Action
 }
 
 // setVersion define the current jplugins version.
 func (a *simpleRelMgtApp) setVersion() {
-	version := "jplugins"
+	version := "simple-relmgt"
 
 	if PRERELEASE {
 		version += " pre-release V" + VERSION

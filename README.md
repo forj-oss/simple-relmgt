@@ -84,6 +84,58 @@ Following are the steps used to release a project.
       The release state is defined by another regexp detected in the release note. `simple-relmgt` will detect it. If not found, by default, it will set `released` except if we change the default use case.
     additionally, `simple-relmgt` will push some artifacts to the github release.
 
+## Jenkinsfile
+
+On `Jenkinsfile` side, there is 2 run context option: Download it from github and run it, or run it from docker.
+
+The following example is based on the download use case.
+
+```Jenkinsfile
+pipeline {
+    agent any
+    environment {
+        env.RELEASE_STATUS = sh(
+                        script: 'simple-relmgt check',
+                        returnStatus: true
+                    )
+    }
+    /* optional */
+    stages {
+        stage('Release PR status') {
+            when {
+                changeRequest target: 'master'
+            }
+            steps {
+                sh('simple-relmgt status')
+            }
+        }
+        stage('tag it') {
+            when {
+                branch 'master'
+                environment name: 'RELEASE_STATUS', value: '0'
+            }
+            steps {
+                sh('simple-relmgt tag-it') // git tag, push it and create a draft github release
+            }
+        }
+        stage ('...'){}
+        stage ('release it') {
+            when {
+                branch 'master'
+                environment name: 'RELEASE_STATUS', value: '0'
+            }
+            steps {
+                sh('simple-relmgt release-it') // release the draft github release
+            }
+        stage ('Any post release tasks...'){}
+
+        }
+    }
+}
+```
+
+
+
 ## Possible futur
 
 For now, we thought this simple automated release process, will be good in most cases. But we may need to enhance it with [github deployment API](https://developer.github.com/v3/repos/deployments/).
