@@ -30,7 +30,7 @@ pipeline {
             steps {
                 sh('''#!/bin/bash -e
                 source ./build-env.sh
-                go test simple-relmgt simple-relmgt/cmds/draft-it''')
+                go test simple-relmgt simple-relmgt/cmds/draftcmd simple-relmgt/cmds/checkcmd simple-relmgt/cmds/releasecmd simple-relmgt/cmds/statecmd simple-relmgt/cmds/tagcmd''')
             }
         }
         stage('Deploy') {
