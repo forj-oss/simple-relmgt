@@ -31,14 +31,6 @@ import (
 	"github.com/forj-oss/forjj-modules/trace"
 )
 
-const (
-	check     = "check"
-	stateIt   = "status"
-	draftIt   = "draft-it"
-	tagIt     = "tag-it"
-	releaseIt = "release-it"
-)
-
 var (
 	build_branch string
 	build_commit string
@@ -51,11 +43,11 @@ type simpleRelMgtApp struct {
 
 	actionDispatch map[string]func([]string)
 
-	check   checkcmd.CheckCmd
-	state   statecmd.StateCmd
-	draft   draftcmd.DraftCmd
-	tag     tagcmd.TagCmd
-	release releasecmd.ReleaseCmd
+	check   checkcmd.Check
+	state   statecmd.State
+	draft   draftcmd.Draft
+	tag     tagcmd.Tag
+	release releasecmd.Release
 }
 
 func (a *simpleRelMgtApp) init() {
@@ -66,11 +58,22 @@ func (a *simpleRelMgtApp) init() {
 	a.setVersion()
 
 	a.actionDispatch = make(map[string]func([]string))
-	a.actionDispatch[check] = a.check.Action
-	a.actionDispatch[stateIt] = a.state.Action
-	a.actionDispatch[draftIt] = a.draft.Action
-	a.actionDispatch[tagIt] = a.tag.Action
-	a.actionDispatch[releaseIt] = a.release.Action
+	
+	a.actionDispatch[checkcmd.CheckCmd] = a.check.Action
+	a.check.Init(a.app)
+
+	a.actionDispatch[statecmd.StateItCmd] = a.state.Action
+	a.state.Init(a.app)
+
+	a.actionDispatch[draftcmd.DraftItCmd] = a.draft.Action
+	a.draft.Init(a.app)
+
+	a.actionDispatch[tagcmd.TagItCmd] = a.tag.Action
+	a.tag.Init(a.app)
+
+	a.actionDispatch[releasecmd.ReleaseItCmd] = a.release.Action
+	a.release.Init(a.app)
+
 }
 
 // setVersion define the current jplugins version.
