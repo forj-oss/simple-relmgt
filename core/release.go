@@ -6,6 +6,8 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"github.com/forj-oss/forjj-modules/trace"
 )
 
 // Release reprensent a release file
@@ -63,7 +65,11 @@ func (r *Release) CheckVersion(version string) (_ int, _ error) {
 
 	// Status 1: Date is newer
 	r.date, err = time.Parse(timeLayout, found[1])
-	if time.Since(r.date).Truncate(time.Hour) == 0 {
+	diff := time.Since(r.date)
+	gotrace.Trace("diff: %6s", diff.String())
+	trunc := diff.Truncate(time.Hour)
+	gotrace.Trace("trunc: %6s", trunc.String())
+	if trunc < 0 {
 		return 1, fmt.Errorf("The release %s is currently planned for %s. Not ready now", version, r.date)
 	}
 

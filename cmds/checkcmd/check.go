@@ -60,12 +60,16 @@ func (c *Check) Action([]string) {
 		os.Exit(2)
 	}
 	c.releaseVersion = result[1]
-	fmt.Printf("Release version detected: %s (in %s)", c.releaseVersion, c.versionFile)
+	fmt.Printf("Release version detected: %s (in %s)\n", c.releaseVersion, c.versionFile)
 
 	c.release = core.NewRelease()
 	var code int
 	code, err = c.release.CheckVersion(c.releaseVersion)
-	fmt.Print(err)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	} else {
+		fmt.Printf("Release %s ready to be published.\n", c.releaseVersion)
+	}
 	os.Exit(code)
 }
 
