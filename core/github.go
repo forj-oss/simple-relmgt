@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"net/http"
@@ -148,6 +149,23 @@ func (g *Github) download() (err error) {
 	command := exec.Command(cmd, params...)
 
 	command.Stdin = resp.Body
+
+	outReader, _ := command.StdoutPipe()
+	errReader, _ := command.StderrPipe()
+
+	go func() {
+		outScanner := bufio.NewScanner(outReader)
+		for outScanner.Scan() {
+			fmt.Printf(outScanner.Text())
+		}
+	}()
+
+	go func() {
+		outScanner := bufio.NewScanner(errReader)
+		for outScanner.Scan() {
+			fmt.Printf(outScanner.Text())
+		}
+	}()
 
 	if err = command.Start(); err != nil {
 		return fmt.Errorf("Unable to run '%s'. %s", g.packageExtract, err)
