@@ -134,8 +134,6 @@ pipeline {
 }
 ```
 
-
-
 ## Possible futur
 
 For now, we thought this simple automated release process, will be good in most cases. But we may need to enhance it with [github deployment API](https://developer.github.com/v3/repos/deployments/).
