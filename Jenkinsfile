@@ -83,10 +83,8 @@ pipeline {
             }
             steps {
                 script {
-                    if (officialReleaseFileFound == 0) {
-                        echo('Using built simple-relmgt...')
-                        releaseStatus = sh(script: releaseCmdPath + ' check', returnStatus: true)
-                    }
+                    echo('Using built simple-relmgt...')
+                    releaseStatus = sh(script: releaseCmdPath + ' check', returnStatus: true)
                 }
             }
         }
