@@ -35,7 +35,7 @@ type Github struct {
 const (
 	defaultVersion        = "v0.7.2"
 	defaultURLPath        = "https://github.com/aktau/github-release/releases/download/%s/%s"
-	defaultFilePath       = "github-release"
+	defaultFilePath       = "tmp/github-release"
 	defaultFileName       = "linux-amd64-github-release.tar.bz2"
 	defaultPackageExtract = "tar -xvjf -"
 )
@@ -153,7 +153,7 @@ func (g *Github) download() (err error) {
 		return fmt.Errorf("Unable to download '%s'. bad status: %s", finalURL, resp.Status)
 	}
 
-	if err = g.UntarFile(g.file, resp.Body); err != nil {
+	if err = g.UntarFile("tmp", filepath.Base(g.file), resp.Body); err != nil {
 		return fmt.Errorf("Unable to uncompress tar ball. %s", err)
 	}
 
@@ -176,7 +176,7 @@ func (g *Github) download() (err error) {
 }
 
 // UntarFile the wanted file
-func (g *Github) UntarFile(file string, r io.Reader) error {
+func (g *Github) UntarFile(dest, file string, r io.Reader) error {
 
 	gzr := bzip2.NewReader(r)
 
@@ -209,7 +209,13 @@ func (g *Github) UntarFile(file string, r io.Reader) error {
 
 		// if it's a file create it
 		case tar.TypeReg:
-			f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if _, err := os.Stat(dest); err != nil {
+				if err := os.MkdirAll(dest, 0755); err != nil {
+					return err
+				}
+			}
+
+			f, err := os.OpenFile(path.Join(dest, file), os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
 				return err
 			}

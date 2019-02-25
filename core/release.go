@@ -44,10 +44,11 @@ func (r *Release) CheckVersion(version string) (_ int, _ error) {
 
 	r.file = fmt.Sprintf(r.fileType, version)
 
-	// status 3: File existence
 	if fi, err := os.Stat(r.file); err != nil {
-		return 3, fmt.Errorf("Issue accessing %s. %s", r.file, err)
+		// No release found. The inexistence of a release file is not an error. No return 
+		return 0, fmt.Errorf("No release file found. %s", err)
 	} else if !fi.Mode().IsRegular() {
+		// status 3: File existence
 		return 3, fmt.Errorf("%s is not a regular file. %s", r.file, err)
 	}
 
