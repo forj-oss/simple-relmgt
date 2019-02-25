@@ -28,9 +28,7 @@ type Check struct {
 }
 
 const (
-	CheckCmd              = "check"
-	defaultVersionFile    = "version.go"
-	defaultExtractVersion = ` *VERSION *= *[\"'](%s)["']`
+	CheckCmd = "check"
 )
 
 // Action execute the `check` command
@@ -56,7 +54,7 @@ func (c *Check) Action([]string) {
 
 	result := c.extractVersionRE.FindStringSubmatch(string(data))
 	if result == nil {
-		fmt.Printf("Release version file (%s) found, but version string has not been detected from '%s'.", c.versionFile, defaultExtractVersion)
+		fmt.Printf("Release version file (%s) found, but version string has not been detected from '%s'.", c.versionFile, core.DefaultExtractVersion)
 		os.Exit(2)
 	}
 	c.releaseVersion = result[1]
@@ -80,10 +78,10 @@ func (c *Check) Init(app *kingpin.Application) {
 	}
 	c.cmd = app.Command(CheckCmd, "Provide a return code on the release status")
 
-	c.versionFile = defaultVersionFile
+	c.versionFile = core.DefaultVersionFile
 
 	var err error
-	c.extractVersionRE, err = regexp.Compile(fmt.Sprintf(defaultExtractVersion, version.SemverRegexpRaw))
+	c.extractVersionRE, err = regexp.Compile(fmt.Sprintf(core.DefaultExtractVersion, version.SemverRegexpRaw))
 	kingpin.FatalIfError(err, "Unable to initialize check command")
 
 }

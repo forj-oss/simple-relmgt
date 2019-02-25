@@ -1,8 +1,10 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/forj-oss/forjj-modules/trace"
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
@@ -42,7 +44,7 @@ func (g *Git) OpenRepo() (err error) {
 // CheckTag verify if the tag `name` exist in the default remote.
 func (g *Git) CheckTag(name string) (found bool, _ error) {
 	if g == nil {
-		return
+		return false, errors.New("git object is nil")
 	}
 
 	var fetchOptions git.FetchOptions
@@ -60,5 +62,43 @@ func (g *Git) CheckTag(name string) (found bool, _ error) {
 		}
 		return
 	})
+	return
+}
+
+// CreateTag create the requested tag name.
+func (g *Git) CreateTag(name string) (err error) {
+	if g == nil {
+		return errors.New("git object is nil")
+	}
+
+	// create/update the tag
+	var fetchOptions git.FetchOptions
+	fetchOptions.Validate()
+	g.repo.Fetch(&fetchOptions)
+
+	tagrefs, err := g.repo.Tags()
+	if err != nil {
+		return err
+	}
+
+	commitID := plumbing.Hash{}
+	if id, err := g.repo.Head(); err != nil {
+		return err
+	} else {
+		commitID = id.Hash()
+	}
+
+	gotrace.Trace("HEAD is %s", commitID)
+
+	err = tagrefs.ForEach(func(t *plumbing.Reference) (_ error) {
+		if t.Name().String() == "refs/tags/"+name {
+			if t.Hash() != commitID {
+				g.repo.DeleteTag(name)
+			}
+		}
+		return
+	})
+
+	g.repo.CreateTag(name, commitID, nil)
 	return
 }
