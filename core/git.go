@@ -3,15 +3,23 @@ package core
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/forj-oss/forjj-modules/trace"
 	git "gopkg.in/src-d/go-git.v4"
+	gitconfig "gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 type Git struct {
+	repo *git.Repository
+
+	remoteName   string
+	removeRemote bool
+
+	protocol string
+	host     string
 	repoPath string
-	repo     *git.Repository
 }
 
 const (
@@ -25,6 +33,12 @@ func NewGit() (ret *Git) {
 	ret.repoPath = defaultRepo
 
 	return
+}
+
+func (g *Git) SetRemote(protocol, host, repoPath string) {
+	if g == nil {
+		return
+	}
 }
 
 // OpenRepo open the GIT repo
@@ -101,4 +115,97 @@ func (g *Git) CreateTag(name string) (err error) {
 
 	g.repo.CreateTag(name, commitID, nil)
 	return
+}
+
+// CreateRemote create or update a remote.
+func (g *Git) CreateRemote(options map[string]string) (_ error) {
+	if v, found := options["remote-name"]; found {
+		g.remoteName = v
+	}
+
+	if g.host == "" || g.repoPath == "" {
+		return errors.New("Unable to create a remote without host/repo-path setup in 'release-mgt.yaml'")
+	}
+
+	if r, err := g.repo.Remote(g.remoteName); r == nil && err.Error() != git.ErrRemoteNotFound.Error() {
+		return err
+	}
+
+	if v, found := options["auto-remove-remote"]; !found || v == "true" {
+		g.removeRemote = true
+	}
+	if g.remoteName == "" {
+		g.remoteName = "ci-upstream"
+	}
+	protocol := "https"
+	if v, found := options["protocol"]; found {
+		protocol = v
+	}
+	if protocol == "" {
+		protocol = "https"
+	}
+	remoteConfig := gitconfig.RemoteConfig{
+		Name: g.remoteName,
+	}
+	switch protocol {
+	case "https", "http":
+		var user *url.Userinfo
+		if u, foundUser := options["user"]; foundUser {
+			if p, foundPassword := options["password"]; foundPassword {
+				user = url.UserPassword(u, p)
+			} else {
+				user = url.User(u)
+			}
+		}
+
+		gitURL := url.URL{
+			Scheme: protocol,
+			Host:   g.host,
+			Path:   g.repoPath,
+			User:   user,
+		}
+		remoteConfig.URLs = []string{gitURL.String()}
+	case "ssh":
+		var user *url.Userinfo
+		if u, found := options["user"]; found {
+			user = url.User(u)
+		}
+
+		gitURL := url.URL{
+			Host: g.host,
+			Path: g.repoPath,
+			User: user,
+		}
+		// By default, define format user@server:repoPath
+		if gitURL.Port() != "" {
+			// define format ssh://user@server:port/repoPath
+			gitURL.Scheme = "ssh"
+		}
+		remoteConfig.URLs = []string{gitURL.String()}
+	default:
+		return errors.New("invalid protocol " + protocol)
+	}
+
+	if _, err := g.repo.CreateRemote(&remoteConfig); err != nil {
+		return err
+	}
+
+	return
+}
+
+// CleanRemote remove a remote previously created.
+func (g *Git) CleanRemote() (_ error) {
+	if g == nil {
+		return errors.New("Git object is nil")
+	}
+	if !g.removeRemote {
+		return
+	}
+
+	r, err := g.repo.Remote(g.remoteName)
+	if r != nil {
+		g.repo.DeleteRemote(g.remoteName)
+	}
+
+	return err
 }

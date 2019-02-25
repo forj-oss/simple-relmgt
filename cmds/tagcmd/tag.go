@@ -13,7 +13,12 @@ import (
 
 // Tag control the tag-it command
 type Tag struct {
-	cmd *kingpin.CmdClause
+	cmd          *kingpin.CmdClause
+	proto        *string
+	user         *string
+	pass         *string
+	remoteName   *string
+	removeRemote *bool
 
 	config *core.Config
 	github *core.Github
@@ -75,6 +80,29 @@ func (c *Tag) Action([]string) {
 	}
 
 	// Check remote. Create it if missing.
+	options := make(map[string]string)
+	if *c.user != "" {
+		options["username"] = *c.user
+	}
+	if *c.pass != "" {
+		options["password"] = *c.pass
+	}
+	if *c.remoteName != "" {
+		options["remote-name"] = *c.remoteName
+	}
+	if *c.removeRemote {
+		options["auto-remove-remote"] = "true"
+	}
+
+	if *c.proto != "" {
+		options["protocol"] = *c.proto
+	}
+	if err = c.git.CreateRemote(options); err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+
+	defer c.git.CleanRemote()
 
 	// Push it
 
@@ -86,7 +114,13 @@ func (c *Tag) Init(app *kingpin.Application) {
 	if c == nil || app == nil {
 		return
 	}
-	c.cmd = app.Command(TagItCmd, "Step to tag the code, before build")
+	c.cmd = app.Command(TagItCmd, "Step to tag the code, and push it, before build")
+	c.proto = c.cmd.Flag("protocol", "url protocol to use. by default, uses https. Supported ones are https/http/ssh").Envar("https").String()
+	c.user = c.cmd.Flag("user", "User name to define in the upstream url (https/https/ssh). Detect GIT_USER").Envar("GIT_USER").String()
+	c.pass = c.cmd.Flag("password", "Password to provide, like a github token. (https/http). Detect GIT_PASSWORD").Envar("GIT_PASSWORD").String()
+	c.remoteName = c.cmd.Flag("remote-name", "Remote name to manage. By default, uses 'ci-upstream'").Default("ci-upstream").String()
+	c.removeRemote = c.cmd.Flag("auto-remove", "Remove the created remote, when done.").Default("true").Bool()
+
 	c.versionFile = core.DefaultVersionFile
 
 	var err error
