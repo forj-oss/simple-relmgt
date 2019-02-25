@@ -1,13 +1,17 @@
 package core
 
 import (
-	"bufio"
+	"archive/tar"
+	"compress/bzip2"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -31,7 +35,7 @@ type Github struct {
 const (
 	defaultVersion        = "v0.7.2"
 	defaultURLPath        = "https://github.com/aktau/github-release/releases/download/%s/%s"
-	defaultFilePath       = "bin/linux/amd64/github-release"
+	defaultFilePath       = "github-release"
 	defaultFileName       = "linux-amd64-github-release.tar.bz2"
 	defaultPackageExtract = "tar -xvjf -"
 )
@@ -109,7 +113,13 @@ func (g *Github) checkGithub() (bool, error) {
 		return false, fmt.Errorf("%s is not executable", g.file)
 	}
 
-	command := exec.Command(g.file, "--version")
+	// Have a relative path to the file
+	cmd := path.Clean(g.file)
+	if filepath.Dir(cmd) == "." {
+		cmd = "./" + g.file
+	}
+
+	command := exec.Command(cmd, "--version")
 	output, err := command.Output()
 	if err != nil {
 		return false, err
@@ -143,36 +153,8 @@ func (g *Github) download() (err error) {
 		return fmt.Errorf("Unable to download '%s'. bad status: %s", finalURL, resp.Status)
 	}
 
-	cmds := strings.Split(g.packageExtract, " ")
-	cmd := cmds[0]
-	params := cmds[1:]
-	command := exec.Command(cmd, params...)
-
-	command.Stdin = resp.Body
-
-	outReader, _ := command.StdoutPipe()
-	errReader, _ := command.StderrPipe()
-
-	go func() {
-		outScanner := bufio.NewScanner(outReader)
-		for outScanner.Scan() {
-			fmt.Printf(outScanner.Text())
-		}
-	}()
-
-	go func() {
-		outScanner := bufio.NewScanner(errReader)
-		for outScanner.Scan() {
-			fmt.Printf(outScanner.Text())
-		}
-	}()
-
-	if err = command.Start(); err != nil {
-		return fmt.Errorf("Unable to run '%s'. %s", g.packageExtract, err)
-	}
-
-	if err = command.Wait(); err != nil {
-		return fmt.Errorf("Issue to run 'curl %s | %s'. %s", finalURL, g.packageExtract, err)
+	if err = g.UntarFile(g.file, resp.Body); err != nil {
+		return fmt.Errorf("Unable to uncompress tar ball. %s", err)
 	}
 
 	if info, err := os.Stat(g.file); err != nil {
@@ -191,4 +173,55 @@ func (g *Github) download() (err error) {
 	}
 
 	return
+}
+
+// UntarFile the wanted file
+func (g *Github) UntarFile(file string, r io.Reader) error {
+
+	gzr := bzip2.NewReader(r)
+
+	tr := tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+
+		switch {
+
+		// if no more files are found return
+		case err == io.EOF:
+			return nil
+
+		// return any other error
+		case err != nil:
+			return err
+
+		// if the header is nil, just skip it (not sure how this happens)
+		case header == nil:
+			continue
+		}
+
+		if filepath.Base(header.Name) != file {
+			continue
+		}
+
+		// check the file type
+		switch header.Typeflag {
+
+		// if it's a file create it
+		case tar.TypeReg:
+			f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+
+			// copy over contents
+			if _, err := io.Copy(f, tr); err != nil {
+				return err
+			}
+
+			// manually close here after each file operation; defering would cause each file close
+			// to wait until all operations have completed.
+			f.Close()
+		}
+	}
 }
