@@ -1,6 +1,11 @@
 package draftcmd
 
-import "github.com/alecthomas/kingpin"
+import (
+	"fmt"
+	"os"
+
+	"github.com/alecthomas/kingpin"
+)
 
 // Draft control the draft-it command
 type Draft struct {
@@ -13,7 +18,8 @@ const (
 
 // Action execute the `check` command
 func (c *Draft) Action([]string) {
-
+	fmt.Printf("%s not currently defined\n", DraftItCmd)
+	os.Exit(5) // Function not defined
 }
 
 // Init initialize the check cli commands

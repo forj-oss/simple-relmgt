@@ -1,6 +1,11 @@
 package tagcmd
 
-import "github.com/alecthomas/kingpin"
+import (
+	"fmt"
+	"os"
+
+	"github.com/alecthomas/kingpin"
+)
 
 // Tag control the tag-it command
 type Tag struct {
@@ -13,6 +18,8 @@ const (
 
 // Action execute the `check` command
 func (c *Tag) Action([]string) {
+	fmt.Printf("%s not currently defined\n", TagItCmd)
+	os.Exit(5) // Function not defined
 
 }
 

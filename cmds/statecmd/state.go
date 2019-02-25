@@ -1,6 +1,11 @@
 package statecmd
 
-import "github.com/alecthomas/kingpin"
+import (
+	"fmt"
+	"os"
+
+	"github.com/alecthomas/kingpin"
+)
 
 // State control the status command
 type State struct {
@@ -13,6 +18,8 @@ const (
 
 // Action execute the `check` command
 func (c *State) Action([]string) {
+	fmt.Printf("%s not currently defined\n", StateItCmd)
+	os.Exit(5) // Function not defined
 
 }
 

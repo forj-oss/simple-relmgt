@@ -1,6 +1,11 @@
 package releasecmd
 
-import "github.com/alecthomas/kingpin"
+import (
+	"fmt"
+	"os"
+
+	"github.com/alecthomas/kingpin"
+)
 
 // Release control the release-it command
 type Release struct {
@@ -13,6 +18,8 @@ const (
 
 // Action execute the `check` command
 func (c *Release) Action([]string) {
+	fmt.Printf("%s not currently defined\n", ReleaseItCmd)
+	os.Exit(5) // Function not defined
 
 }
 

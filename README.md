@@ -99,8 +99,8 @@ pipeline {
                         returnStatus: true
                     )
     }
-    /* optional */
     stages {
+        /* optional */
         stage('Release PR status') {
             when {
                 changeRequest target: 'master'
