@@ -6,8 +6,6 @@ import (
 	"os"
 	"regexp"
 	"time"
-
-	"github.com/forj-oss/forjj-modules/trace"
 )
 
 // Release reprensent a release file
@@ -45,7 +43,7 @@ func (r *Release) CheckVersion(version string) (_ int, _ error) {
 	r.file = fmt.Sprintf(r.fileType, version)
 
 	if fi, err := os.Stat(r.file); err != nil {
-		// No release found. The inexistence of a release file is not an error. No return 
+		// No release found. The inexistence of a release file is not an error. No return
 		return 0, fmt.Errorf("No release file found. %s", err)
 	} else if !fi.Mode().IsRegular() {
 		// status 3: File existence
@@ -67,11 +65,9 @@ func (r *Release) CheckVersion(version string) (_ int, _ error) {
 	// Status 1: Date is newer
 	r.date, err = time.Parse(timeLayout, found[1])
 	diff := time.Since(r.date)
-	gotrace.Trace("diff: %6s", diff.String())
 	trunc := diff.Truncate(time.Hour)
-	gotrace.Trace("trunc: %6s", trunc.String())
 	if trunc < 0 {
-		return 1, fmt.Errorf("The release %s is currently planned for %s. Not ready now", version, r.date)
+		return 1, fmt.Errorf("The release %s is currently planned for %s. It will be in %6s. Not ready now", version, r.date, -trunc)
 	}
 
 	// Status 0: Ready
