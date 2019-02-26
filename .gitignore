@@ -5,3 +5,4 @@ debug
 *.bak
 .vscode
 github-release
+*.sw[op]

@@ -20,6 +20,8 @@ type Git struct {
 	protocol string
 	host     string
 	repoPath string
+
+	
 }
 
 const (
@@ -208,4 +210,11 @@ func (g *Git) CleanRemote() (_ error) {
 	}
 
 	return err
+}
+
+// PushTag push a tag to the remote repository
+func (g *Git) PushTag() (err error) {
+
+
+	return
 }

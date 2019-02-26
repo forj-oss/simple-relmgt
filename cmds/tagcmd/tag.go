@@ -84,7 +84,6 @@ func (c *Tag) Action([]string) {
 
 	c.git.SetRemote(c.config.Yaml.Upstream.Name, c.config.Yaml.Upstream.Protocol, c.config.Yaml.Upstream.Server, c.config.Yaml.Upstream.RepoPath)
 
-
 	// Check remote. Create it if missing.
 	options := make(core.GitRemoteConfig)
 
@@ -102,8 +101,16 @@ func (c *Tag) Action([]string) {
 	defer c.git.CleanRemote()
 
 	// Push it
+	if err = c.git.PushTag(); err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
 
 	// create github release in draft mode
+	/*	if err = c.github.CreateDraft(c.releaseVersion) ; err != nil  {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}*/
 }
 
 // Init initialize the check cli commands
