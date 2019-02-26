@@ -1,5 +1,5 @@
 package core
 
-type yamlConfig struct {
-	Upstream yamlUpstream
+type YamlConfig struct {
+	Upstream YamlUpstream
 }

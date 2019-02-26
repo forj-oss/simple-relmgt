@@ -35,10 +35,14 @@ func NewGit() (ret *Git) {
 	return
 }
 
-func (g *Git) SetRemote(protocol, host, repoPath string) {
+func (g *Git) SetRemote(name, protocol, host, repoPath string) {
 	if g == nil {
 		return
 	}
+	g.remoteName = name
+	g.protocol = protocol
+	g.host = host
+	g.repoPath = repoPath
 }
 
 // OpenRepo open the GIT repo
@@ -118,10 +122,8 @@ func (g *Git) CreateTag(name string) (err error) {
 }
 
 // CreateRemote create or update a remote.
-func (g *Git) CreateRemote(options map[string]string) (_ error) {
-	if v, found := options["remote-name"]; found {
-		g.remoteName = v
-	}
+func (g *Git) CreateRemote(options GitRemoteConfig) (_ error) {
+	g.remoteName = options.Get("remote-name", g.remoteName, "ci-upstream")
 
 	if g.host == "" || g.repoPath == "" {
 		return errors.New("Unable to create a remote without host/repo-path setup in 'release-mgt.yaml'")
@@ -129,25 +131,21 @@ func (g *Git) CreateRemote(options map[string]string) (_ error) {
 
 	if r, err := g.repo.Remote(g.remoteName); r == nil && err.Error() != git.ErrRemoteNotFound.Error() {
 		return err
+	} else if r != nil {
+		g.removeRemote = false
+		gotrace.Trace("Remote '%s' already exist. Not recreated.", g.remoteName)
+		return nil
 	}
 
 	if v, found := options["auto-remove-remote"]; !found || v == "true" {
 		g.removeRemote = true
 	}
-	if g.remoteName == "" {
-		g.remoteName = "ci-upstream"
-	}
-	protocol := "https"
-	if v, found := options["protocol"]; found {
-		protocol = v
-	}
-	if protocol == "" {
-		protocol = "https"
-	}
+
 	remoteConfig := gitconfig.RemoteConfig{
 		Name: g.remoteName,
 	}
-	switch protocol {
+
+	switch protocol := options.Get("protocol", g.protocol, "https"); protocol {
 	case "https", "http":
 		var user *url.Userinfo
 		if u, foundUser := options["user"]; foundUser {
@@ -189,6 +187,7 @@ func (g *Git) CreateRemote(options map[string]string) (_ error) {
 	if _, err := g.repo.CreateRemote(&remoteConfig); err != nil {
 		return err
 	}
+	gotrace.Trace("Remote '%s' created.", g.remoteName)
 
 	return
 }
@@ -205,6 +204,7 @@ func (g *Git) CleanRemote() (_ error) {
 	r, err := g.repo.Remote(g.remoteName)
 	if r != nil {
 		g.repo.DeleteRemote(g.remoteName)
+		gotrace.Trace("Remote '%s' removed.", g.remoteName)
 	}
 
 	return err

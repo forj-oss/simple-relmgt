@@ -35,9 +35,12 @@ const (
 func (c *Check) Action([]string) {
 	c.config = core.NewConfig("release-mgt.yaml")
 
+	_, err := c.config.Load()
+	kingpin.FatalIfError(err, "Unable to load %s properly.", c.config.Filename())
+
 	c.github = core.NewGithub()
 
-	err := c.github.CheckGithub()
+	err = c.github.CheckGithub()
 	kingpin.FatalIfError(err, "Unable to get github-release")
 
 	c.git = core.NewGit()

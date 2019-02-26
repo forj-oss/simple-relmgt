@@ -40,9 +40,12 @@ const (
 func (c *Tag) Action([]string) {
 	c.config = core.NewConfig("release-mgt.yaml")
 
+	_, err := c.config.Load()
+	kingpin.FatalIfError(err, "Unable to load %s properly.", c.config.Filename())
+
 	c.github = core.NewGithub()
 
-	err := c.github.CheckGithub()
+	err = c.github.CheckGithub()
 	kingpin.FatalIfError(err, "Unable to get github-release")
 
 	c.git = core.NewGit()
@@ -79,24 +82,18 @@ func (c *Tag) Action([]string) {
 		os.Exit(1)
 	}
 
-	// Check remote. Create it if missing.
-	options := make(map[string]string)
-	if *c.user != "" {
-		options["username"] = *c.user
-	}
-	if *c.pass != "" {
-		options["password"] = *c.pass
-	}
-	if *c.remoteName != "" {
-		options["remote-name"] = *c.remoteName
-	}
-	if *c.removeRemote {
-		options["auto-remove-remote"] = "true"
-	}
+	c.git.SetRemote(c.config.Yaml.Upstream.Name, c.config.Yaml.Upstream.Protocol, c.config.Yaml.Upstream.Server, c.config.Yaml.Upstream.RepoPath)
 
-	if *c.proto != "" {
-		options["protocol"] = *c.proto
-	}
+
+	// Check remote. Create it if missing.
+	options := make(core.GitRemoteConfig)
+
+	options.Set("username", *c.user)
+	options.Set("password", *c.pass)
+	options.SetIfNotContains("remote-name", *c.remoteName, "ci-upstream")
+	options.SetIf("auto-remove-remote", "false", !*c.removeRemote)
+	options.Set("protocol", *c.proto)
+
 	if err = c.git.CreateRemote(options); err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/forj-oss/forjj-modules/trace"
 	"gopkg.in/yaml.v2"
 )
 
 // Config is the top Configuration object.
 type Config struct {
-	yaml yamlConfig
+	Yaml YamlConfig
 	file string
 }
 
@@ -22,27 +23,39 @@ func NewConfig(file string) (ret *Config) {
 	return
 }
 
+// Filename return the configuration file name.
+func (c Config) Filename() string {
+	return c.file
+}
+
 // Load the configuration file
-func (c *Config) Load() (err error) {
+func (c *Config) Load() (loaded bool, err error) {
 	if c == nil {
-		return errors.New("Config object is nil. Unable to load")
+		err = errors.New("Config object is nil. Unable to load")
+		return
 	}
 
 	var fd *os.File
 	fd, err = os.Open(c.file)
 	if err != nil {
-		return fmt.Errorf("Unable to load '%s'. %s", c.file, err)
+		gotrace.Warning("%s not loaded. %s", c.file, err)
+		return
 	}
 
 	decoder := yaml.NewDecoder(fd)
 
 	if decoder == nil {
-		return fmt.Errorf("Unable to load '%s'. yaml decoder object not created", c.file)
+		err = fmt.Errorf("Unable to load '%s'. yaml decoder object not created", c.file)
+		return
 	}
 
-	err = decoder.Decode(&c.yaml)
+	err = decoder.Decode(&c.Yaml)
 	if err != nil {
-		return fmt.Errorf("Unable to read yaml file '%s'. %s", c.file, err)
+		err = fmt.Errorf("Unable to read yaml file '%s'. %s", c.file, err)
+		return
 	}
+
+	gotrace.Info("%s loaded.", c.file)
+	loaded = true
 	return
 }
