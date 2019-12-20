@@ -34,6 +34,6 @@ func main() {
 
 	actions := strings.Split(kingpin.MustParse(App.app.Parse(os.Args[1:])), " ")
 	if f, found := App.actionDispatch[actions[0]]; found {
-		f(actions)
+		os.Exit(f(actions))
 	}
 }

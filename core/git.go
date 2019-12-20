@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/forj-oss/forjj-modules/trace"
+	gotrace "github.com/forj-oss/forjj-modules/trace"
 	git "gopkg.in/src-d/go-git.v4"
 	gitconfig "gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -21,7 +21,8 @@ type Git struct {
 	host     string
 	repoPath string
 
-	
+	tag    *plumbing.Reference
+	remote *git.Remote
 }
 
 const (
@@ -91,35 +92,36 @@ func (g *Git) CreateTag(name string) (err error) {
 		return errors.New("git object is nil")
 	}
 
-	// create/update the tag
+	// Fetch repo
 	var fetchOptions git.FetchOptions
 	fetchOptions.Validate()
 	g.repo.Fetch(&fetchOptions)
 
-	tagrefs, err := g.repo.Tags()
-	if err != nil {
-		return err
-	}
-
+	// Head commit
 	commitID := plumbing.Hash{}
 	if id, err := g.repo.Head(); err != nil {
 		return err
 	} else {
 		commitID = id.Hash()
 	}
-
 	gotrace.Trace("HEAD is %s", commitID)
 
-	err = tagrefs.ForEach(func(t *plumbing.Reference) (_ error) {
-		if t.Name().String() == "refs/tags/"+name {
-			if t.Hash() != commitID {
-				g.repo.DeleteTag(name)
-			}
+	// Get tag if exist
+	g.tag, err = g.repo.Tag(name)
+	if err != nil && err.Error() != git.ErrTagNotFound.Error() {
+		return err
+	} else if g.tag != nil {
+		if g.tag.Hash() == commitID {
+			gotrace.Trace("Tag %s already linked to %s", name, commitID)
+			return
 		}
-		return
-	})
+		g.repo.DeleteTag(name)
+		gotrace.Trace("Updating tag %s to %s", name, commitID)
+	} else {
+		gotrace.Trace("Creating tag %s to %s", name, commitID)
+	}
 
-	g.repo.CreateTag(name, commitID, nil)
+	g.tag, err = g.repo.CreateTag(name, commitID, nil)
 	return
 }
 
@@ -135,6 +137,7 @@ func (g *Git) CreateRemote(options GitRemoteConfig) (_ error) {
 		return err
 	} else if r != nil {
 		g.removeRemote = false
+		g.remote = r
 		gotrace.Trace("Remote '%s' already exist. Not recreated.", g.remoteName)
 		return nil
 	}
@@ -166,28 +169,40 @@ func (g *Git) CreateRemote(options GitRemoteConfig) (_ error) {
 		}
 		remoteConfig.URLs = []string{gitURL.String()}
 	case "ssh":
-		var user *url.Userinfo
+		var user string
 		if u, found := options["user"]; found {
-			user = url.User(u)
+			user = u
+		} else {
+			user = "git"
 		}
 
+		URL := ""
+		if user != "" {
+			URL = user + "@"
+		}
+		URL += g.host + ":" + g.repoPath
 		gitURL := url.URL{
 			Host: g.host,
 			Path: g.repoPath,
-			User: user,
+			User: url.User(user),
 		}
 		// By default, define format user@server:repoPath
 		if gitURL.Port() != "" {
 			// define format ssh://user@server:port/repoPath
 			gitURL.Scheme = "ssh"
+			remoteConfig.URLs = []string{gitURL.String()}
+		} else {
+			remoteConfig.URLs = []string{URL}
 		}
-		remoteConfig.URLs = []string{gitURL.String()}
+
 	default:
 		return errors.New("invalid protocol " + protocol)
 	}
 
-	if _, err := g.repo.CreateRemote(&remoteConfig); err != nil {
+	if r, err := g.repo.CreateRemote(&remoteConfig); err != nil {
 		return err
+	} else {
+		g.remote = r
 	}
 	gotrace.Trace("Remote '%s' created.", g.remoteName)
 
@@ -214,7 +229,25 @@ func (g *Git) CleanRemote() (_ error) {
 
 // PushTag push a tag to the remote repository
 func (g *Git) PushTag() (err error) {
+	if g == nil {
+		return errors.New("git object is nil")
+	}
 
+	if g.remote == nil {
+		return errors.New("git.remote object is nil")
+	}
 
-	return
+	if g.tag == nil {
+		return errors.New("git.tag object is nil")
+	}
+
+	ref := gitconfig.RefSpec(g.tag.Name() + ":" + g.tag.Name())
+	pushOptions := git.PushOptions{
+		RemoteName: g.remoteName,
+		RefSpecs: []gitconfig.RefSpec{
+			ref,
+		},
+	}
+
+	return g.remote.Push(&pushOptions)
 }

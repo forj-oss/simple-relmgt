@@ -2,7 +2,6 @@ package releasecmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -17,9 +16,9 @@ const (
 )
 
 // Action execute the `check` command
-func (c *Release) Action([]string) {
+func (c *Release) Action([]string) (code int) {
 	fmt.Printf("%s not currently defined\n", ReleaseItCmd)
-	os.Exit(5) // Function not defined
+	return 5 // Function not defined
 
 }
 
@@ -29,4 +28,5 @@ func (c *Release) Init(app *kingpin.Application) {
 		return
 	}
 	c.cmd = app.Command(ReleaseItCmd, "Step to release the code after build success.")
+	return
 }

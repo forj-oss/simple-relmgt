@@ -31,7 +31,7 @@ const (
 )
 
 // Action execute the `check` command
-func (c *State) Action([]string) {
+func (c *State) Action([]string) (code int) {
 	c.config = core.NewConfig("release-mgt.yaml")
 	
 	_, err := c.config.Load()
@@ -69,6 +69,7 @@ func (c *State) Action([]string) {
 	} else {
 		fmt.Printf("Release %s ready to be published.\n", c.releaseVersion)
 	}
+	return
 }
 
 // Init initialize the check cli commands

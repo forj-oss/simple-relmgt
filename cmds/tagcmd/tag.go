@@ -3,7 +3,6 @@ package tagcmd
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"regexp"
 	"simple-relmgt/core"
 
@@ -37,7 +36,7 @@ const (
 )
 
 // Action execute the `tag-it` command
-func (c *Tag) Action([]string) {
+func (c *Tag) Action([]string) int {
 	c.config = core.NewConfig("release-mgt.yaml")
 
 	_, err := c.config.Load()
@@ -57,13 +56,13 @@ func (c *Tag) Action([]string) {
 	data, err = ioutil.ReadFile(c.versionFile)
 	if err != nil {
 		fmt.Printf("Unable to read release version file %s. %s", c.versionFile, err)
-		os.Exit(3)
+		return 1
 	}
 
 	result := c.extractVersionRE.FindStringSubmatch(string(data))
 	if result == nil {
 		fmt.Printf("Release version file (%s) found, but version string has not been detected from '%s'.", c.versionFile, core.DefaultExtractVersion)
-		os.Exit(2)
+		return 1
 	}
 	c.releaseVersion = result[1]
 	fmt.Printf("Release version detected: %s (in %s)\n", c.releaseVersion, c.versionFile)
@@ -72,19 +71,19 @@ func (c *Tag) Action([]string) {
 	_, err = c.release.CheckVersion(c.releaseVersion)
 	if err != nil {
 		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// Ready to tag it
 
 	if err = c.git.CreateTag(c.releaseVersion); err != nil {
 		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		return 1
 	}
 
+	// Check remote. Create it if missing.
 	c.git.SetRemote(c.config.Yaml.Upstream.Name, c.config.Yaml.Upstream.Protocol, c.config.Yaml.Upstream.Server, c.config.Yaml.Upstream.RepoPath)
 
-	// Check remote. Create it if missing.
 	options := make(core.GitRemoteConfig)
 
 	options.Set("username", *c.user)
@@ -95,7 +94,7 @@ func (c *Tag) Action([]string) {
 
 	if err = c.git.CreateRemote(options); err != nil {
 		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	defer c.git.CleanRemote()
@@ -103,7 +102,7 @@ func (c *Tag) Action([]string) {
 	// Push it
 	if err = c.git.PushTag(); err != nil {
 		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	// create github release in draft mode
@@ -111,6 +110,7 @@ func (c *Tag) Action([]string) {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}*/
+	return 0
 }
 
 // Init initialize the check cli commands

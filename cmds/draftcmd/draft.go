@@ -2,7 +2,6 @@ package draftcmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -17,9 +16,9 @@ const (
 )
 
 // Action execute the `check` command
-func (c *Draft) Action([]string) {
+func (c *Draft) Action([]string) (code int) {
 	fmt.Printf("%s not currently defined\n", DraftItCmd)
-	os.Exit(5) // Function not defined
+	return 5 // Function not defined
 }
 
 // Init initialize the check cli commands

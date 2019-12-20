@@ -41,7 +41,7 @@ var (
 type simpleRelMgtApp struct {
 	app *kingpin.Application
 
-	actionDispatch map[string]func([]string)
+	actionDispatch map[string]func([]string) (int)
 
 	check   checkcmd.Check
 	state   statecmd.State
@@ -57,7 +57,7 @@ func (a *simpleRelMgtApp) init() {
 
 	a.setVersion()
 
-	a.actionDispatch = make(map[string]func([]string))
+	a.actionDispatch = make(map[string]func([]string) (int))
 	
 	a.actionDispatch[checkcmd.CheckCmd] = a.check.Action
 	a.check.Init(a.app)
