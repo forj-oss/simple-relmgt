@@ -1,0 +1,5 @@
+---
+upstream:
+  server: github.com
+  repo-path: forj-oss/simple-relmgt.git
+  protocol: https

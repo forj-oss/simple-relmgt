@@ -1,1 +1,8 @@
 .be-*
+vendor
+simple-relmgt
+debug
+*.bak
+.vscode
+github-release
+*.sw[op]
